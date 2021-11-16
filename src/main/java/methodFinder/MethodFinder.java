@@ -15,6 +15,7 @@ import java.util.List;
 public class MethodFinder {
 
     private static final int THREAD_COUNT = 4;
+    private static int max_chain_length = 0;
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -28,72 +29,66 @@ public class MethodFinder {
         }
         else
         {
-            //String pwd = System.getProperty("user.dir");
-            //System.out.println("Working Directory = " + pwd);
-
             List<List<String>> data = new ArrayList<>();
 
-            for(int i = 0; i < args.length; i++)
-            {
-                File target = new File(args[i]);
+            for (String arg : args) {
+                File target = new File(arg);
 
-                if(target.exists() == false)
-                {
-                    System.out.println("Couldn't find target at path: " + args[i]);
+                if (!target.exists()) {
+                    System.out.println("Couldn't find target at path: " + arg);
                     System.out.println("Expected usage: args contain full path to files or folders of files to parse.");
                     continue;
                 }
 
-                if(target.isFile())
+                if (target.isFile()) {
+                    System.out.println("Processing file " + target.getName());
+
                     data.add(processFile(new FileInputStream(target.getAbsolutePath()), "Undefined," + target.getName() + ","));
-                else if(target.isDirectory())
-                {
+                } else if (target.isDirectory()) {
                     File[] repos = target.listFiles();
-                    if(repos == null)
-                    {
+                    if (repos == null) {
                         System.out.println(args[0] + " has no content to parse.");
                         return;
                     }
 
-                    Thread[] threads = new Thread[4];
+                    System.out.println("Processing directory " + target.getName() + " with " + repos.length + " sub-files/folders");
 
-                    for(int n = 0; n < THREAD_COUNT; i++)
-                    {
-                        Runnable r = new Runnable() {
-                            @Override
-                            public void run() {
-                                int bin_size = repos.length / THREAD_COUNT;
-                                for(int k = bin_size * n; k < bin_size * (n+1); k++)
-                                {
-                                    for(File f : repos[k].listFiles())
-                                    {
-                                        try {
-                                            String identifier = repos[k].getName() + "," + f.getName() + ",";
-                                            data.add(processFile(new FileInputStream(f.getAbsolutePath()), identifier));
-                                        }
-                                        catch(Exception e)
-                                        {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }
-                            }
-                        };
-
-                        threads[n] = new Thread(r);
-                        threads[n].run();
-                    }
-
-                    try {
-                        for(int n = 0; n < threads.length; n++)
-                            threads[n].join();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    processRepos(repos, data);
                 }
             }
 
             writeCSV(data);
+        }
+    }
+
+    protected static void processRepos(File[] repos, List<List<String>> data)
+    {
+        final int bin_size = repos.length / THREAD_COUNT;
+        Thread[] threads = new Thread[THREAD_COUNT];
+        RepoProcessor[] processors = new RepoProcessor[THREAD_COUNT];
+
+        for(int i = 0; i < THREAD_COUNT - 1; i++)
+        {
+            processors[i] = new RepoProcessor(repos, bin_size * i, bin_size * (i+1) );
+            threads[i] = new Thread(processors[i]);
+            threads[i].start();
+        }
+
+        processors[THREAD_COUNT - 1] = new RepoProcessor(repos, bin_size * (THREAD_COUNT - 1), repos.length);
+        threads[THREAD_COUNT - 1] = new Thread(processors[THREAD_COUNT - 1]);
+        threads[THREAD_COUNT - 1].start();
+
+        try {
+            for(int i = 0; i < threads.length; i++)
+            {
+                threads[i].join();
+                data.add(processors[i].getRepoStats());
+
+                if(max_chain_length < processors[i].longestChain())
+                    max_chain_length = processors[i].longestChain();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -111,10 +106,7 @@ public class MethodFinder {
 
             return result;
         }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-        }
+        catch(Exception e) { e.printStackTrace(); }
 
         return null;
     }
@@ -129,11 +121,7 @@ public class MethodFinder {
                     )
                     .orElse(1);
         }
-        catch(Exception e)
-        {
-            e.printStackTrace();
-            return -1;
-        }
+        catch(Exception e) { e.printStackTrace(); return 0; }
     }
 
     protected static void writeCSV(List<List<String>> data)
@@ -142,11 +130,16 @@ public class MethodFinder {
         {
             FileWriter csvWriter = new FileWriter("method_chaining_results.csv");
 
-            csvWriter.append("Repo,File,ChainLength\n");
+            csvWriter.append("Repo,LongestChain");
+
+            for(int i = 0; i <= max_chain_length; i++)
+                csvWriter.append(",").append("Length ").append(String.valueOf(i));
+
+            csvWriter.append("\n");
 
             for (List<String> repos : data) {
                 for(String observation : repos )
-                    csvWriter.append(observation);
+                    csvWriter.append(padOutputWithZeros(observation));
             }
 
             csvWriter.flush();
@@ -157,6 +150,31 @@ public class MethodFinder {
             e.printStackTrace();
         }
 
+    }
+
+    protected static String padOutputWithZeros(String observation)
+    {
+        observation = observation.substring(0, observation.length() - 1);
+
+        int count = 0;
+        for(int i = 0; i < observation.length(); i++)
+        {
+            if(observation.charAt(i) == ',')
+                count++;
+        }
+
+        count = max_chain_length + 2 - count;
+
+        StringBuilder sb = new StringBuilder(observation);
+        while(count > 0)
+        {
+            sb.append(",0");
+            count--;
+        }
+
+        sb.append("\n");
+
+        return sb.toString();
     }
 
 }
