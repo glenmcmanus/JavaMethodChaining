@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r load data}
 
-f <- read.csv(file = '../parsing/method_chaining_results.csv')
+f <- read.csv(file = '../Parser/method_chaining_results.csv')
 
 ```
 
