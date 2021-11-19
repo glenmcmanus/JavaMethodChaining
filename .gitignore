@@ -91,3 +91,50 @@ gradle-app.setting
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
 
+### R Studio ###
+
+# History files
+Analysis/.Rhistory
+Analysis/.Rapp.history
+
+# Session Data files
+Analysis/.RData
+
+# User-specific files
+Analysis/.Ruserdata
+
+# Example code in package build process
+Analysis/*-Ex.R
+
+# Output files from R CMD build
+Analysis/*.tar.gz
+
+# Output files from R CMD check
+Analysis/*.Rcheck/
+
+# RStudio files
+Analysis/.Rproj.user/
+
+# produced vignettes
+Analysis/vignettes/*.html
+Analysis/vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+Analysis/.httr-oauth
+
+# knitr and R markdown default cache directories
+Analysis/*_cache/
+Analysis//cache/
+
+# Temporary files created by R markdown
+Analysis/*.utf8.md
+Analysis/*.knit.md
+
+# R Environment Variables
+Analysis/.Renviron
+
+# pkgdown site
+Analysis/docs/
+
+# translation temp files
+Analysis/po/*~

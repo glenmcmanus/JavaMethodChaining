@@ -1,0 +1,82 @@
+---
+title: "Analysis"
+output: html_document
+---
+
+```{r libraries}
+
+library(tidyverse)
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load data}
+
+f <- read.csv(file = '../Parser/method_chaining_results.csv')
+
+```
+
+```{r clean data}
+
+f <- f[!(f$LongestChain == -1),]
+
+```
+
+```{r relative_occurrence (fn)}
+
+relative_occurrence <- f
+
+relative_occurrence[ , 5:403] <- f[ , 5:403] / f[ , 4]
+
+relative_occurrence <- select(relative_occurrence, -LongestChain, -Length.0, -Length.1)
+
+```
+
+```{r clean relative_occurrence}
+
+relative_occurrence <- relative_occurrence[!(is.nan(relative_occurrence$Length.2) | relative_occurrence$Length.2 == Inf), ]
+
+```
+
+```{r fn}
+
+fn <- data.frame(row.names = c(1:400))
+fn$n <- c(1:400)
+#fn$count <- c(2:400)
+fn$relative_occurrence <- c(1:400)
+
+for(i in 1:nrow(fn)) {
+  #fn[i,1] <- sum(na.omit(f[, i + 4]))
+  fn[i,2] <- mean(na.omit(relative_occurrence[, i]))
+}
+
+fn <- fn[-1,]
+
+```
+
+```{r plot fn}
+p <- ggplot(fn, aes(n, relative_occurrence))
+p + geom_point() + scale_y_log10() + scale_x_log10()
+```
+
+```{r ratio}
+
+ratio <- f
+ratio <- select(ratio, Repo)
+
+ratio$r <- f[ , 3]
+for(i in 0:nrow(ratio)) {
+  ratio[i, 2] <- sum(f[i, 5:403]) / sum(f[i, 3:403])  
+}
+```
+
+```{r ratio histogram}
+
+a <- ggplot(ratio, aes(x = r))
+
+a + geom_histogram(color = "black", fill = "red")
+
+```
