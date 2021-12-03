@@ -40,21 +40,13 @@ public class RepoProcessor implements Runnable {
             if(repos[i].isFile())
             {
                 try {
-//                    identifier.setLength(0);
-//                    identifier.append("Undefined,").append(repos[i].getName()).append(",");
-//                    data.add(MethodFinder.processFile(new FileInputStream(repos[i].getAbsolutePath()), identifier.toString()));
                     processFile(new FileInputStream(repos[i].getAbsolutePath()), repos[i].getName());
                 }
                 catch (Exception e) { e.printStackTrace(); }
             }
             else {
-                //System.out.println("Processing repo " + repos[i].getName());
-
                 for (File f : Objects.requireNonNull(repos[i].listFiles())) {
                     try {
-//                        identifier.setLength(0);
-//                        identifier.append(repos[i].getName()).append(",").append(f.getName()).append(",");
-//                        data.add(MethodFinder.processFile(new FileInputStream(f.getAbsolutePath()), identifier.toString()));
                         processFile(new FileInputStream(f.getAbsolutePath()), repos[i].getName());
                     } catch (Exception e) {
                         e.printStackTrace();

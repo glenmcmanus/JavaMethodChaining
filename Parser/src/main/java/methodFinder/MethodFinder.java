@@ -19,6 +19,9 @@ public class MethodFinder {
 
     public static void main(String[] args) throws FileNotFoundException {
 
+        for(var s : args)
+            System.out.println("'"+s+"'");
+
         if(args.length == 0)
         {
             CompilationUnit cu = StaticJavaParser.parse(new File("src/main/java/testRepo/ReversePolishNotation.java"));
@@ -26,6 +29,16 @@ public class MethodFinder {
             cu.getTypes().stream()
                 .flatMap(x -> x.findAll(MethodCallExpr.class).stream())
                 .forEach(x -> System.out.println(x.toString() + "\nMethod Chains = " + getScopeSize(x)));
+        }
+        else if(args[0].strip().equals("-identify"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println("A full path to a target repo must be provided for identification of unique methods");
+                return;
+            }
+
+            handleIdentify(new File(args[1]));
         }
         else
         {
@@ -57,8 +70,60 @@ public class MethodFinder {
                 }
             }
 
-            writeCSV(data);
+            write_MC_Count_CSV(data);
         }
+    }
+
+    protected static void handleIdentify(File arg_target)
+    {
+        if (!arg_target.exists()) {
+            System.out.println("Couldn't find target at path: " + arg_target);
+            System.out.println("Expected usage: args contain full path to files or folders of files to parse.");
+            return;
+        }
+
+        if (arg_target.isFile()) {
+            System.out.println("Processing file " + arg_target.getName());
+
+            getUniqueMethodNames(new File[] {arg_target});
+        } else if (arg_target.isDirectory()) {
+            File[] repos = arg_target.listFiles();
+            if (repos == null) {
+                System.out.println(arg_target.getName() + " has no content to parse.");
+                return;
+            }
+
+            System.out.println("Processing directory " + arg_target.getName() + " with " + repos.length + " sub-files/folders");
+
+            getUniqueMethodNames(repos);
+        }
+    }
+
+    protected  static void getUniqueMethodNames(File[] repos)
+    {
+        final int bin_size = repos.length / THREAD_COUNT;
+        Thread[] threads = new Thread[THREAD_COUNT];
+        ChainRootIdentifier[] identifiers = new ChainRootIdentifier[THREAD_COUNT];
+
+        for(int i = 0; i < THREAD_COUNT - 1; i++)
+        {
+            identifiers[i] = new ChainRootIdentifier(repos, bin_size * i, bin_size * (i+1) );
+            threads[i] = new Thread(identifiers[i]);
+            threads[i].start();
+        }
+
+        identifiers[THREAD_COUNT - 1] = new ChainRootIdentifier(repos, bin_size * (THREAD_COUNT - 1), repos.length);
+        threads[THREAD_COUNT - 1] = new Thread(identifiers[THREAD_COUNT - 1]);
+        threads[THREAD_COUNT - 1].start();
+
+        try {
+            for(int i = 0; i < threads.length; i++)
+                threads[i].join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        write_unique_method_name_CSV(identifiers);
     }
 
     protected static void processRepos(File[] repos, List<List<String>> data)
@@ -124,11 +189,50 @@ public class MethodFinder {
         catch(Exception e) { e.printStackTrace(); return 0; }
     }
 
-    protected static void writeCSV(List<List<String>> data)
+    protected  static void write_unique_method_name_CSV(ChainRootIdentifier[] identifiers)
     {
+        File output_dir = new File("output/");
+        if(!output_dir.exists())
+            output_dir.mkdir();
+
+        System.out.println("Write unique method names");
+        final StringBuilder sb = new StringBuilder("output/");
+        for(var identifier : identifiers)
+        {
+            for(String repo : identifier.getRepoNames())
+            {
+                try
+                {
+                    sb.append(repo).append("_identifiers.csv");
+                    FileWriter csvWriter = new FileWriter(sb.toString());
+
+                    csvWriter.append("Method_Name,Method_Type\n");
+
+                    for(String row : identifier.getRepoMethodNames(repo))
+                    {
+                        csvWriter.append(row);
+                    }
+
+                    csvWriter.flush();
+                    csvWriter.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                sb.setLength("/output/".length());
+            }
+        }
+    }
+
+    protected static void write_MC_Count_CSV(List<List<String>> data)
+    {
+        File output_dir = new File("output/");
+        if(!output_dir.exists())
+            output_dir.mkdir();
+
         try
         {
-            FileWriter csvWriter = new FileWriter("method_chaining_results.csv");
+            FileWriter csvWriter = new FileWriter("output/method_chaining_results.csv");
 
             csvWriter.append("Repo,LongestChain");
 
