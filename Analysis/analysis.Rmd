@@ -25,6 +25,51 @@ f <- f[!(f$LongestChain == -1),]
 
 ```
 
+```{r find repos with longest chains}
+S_bin <- f %>% filter(f$LongestChain > 1 & f$LongestChain <= 8)
+S_bin
+L_bin <- f %>% filter(f$LongestChain > 8 & f$LongestChain < 42)
+L_bin
+XL_bin <- f %>% filter(f$LongestChain >= 42)
+XL_bin
+f %>% filter(f$LongestChain >= 100)
+f %>% filter(f$LongestChain >= 200)
+f %>% filter(f$LongestChain >= 300)
+
+
+```
+
+```{r bin_stats funct}
+bin_stats <- function(bin, bin_lower, bin_upper) {
+  tmp <- bin[, bin_lower:bin_upper]
+  tmp <- colSums(tmp, na.rm = TRUE)
+  tmp_pop <- sum(tmp)
+  tmp_mu <- sum(colSums(bin[,5:bin_upper]) * seq(2,bin_upper-3)) / sum(bin[,5:bin_upper])
+  tmp_bin_mu <- sum(tmp * seq(bin_lower-3,bin_upper-3)) / sum(tmp)
+  
+  tmp_bin_sd <- 0
+  for(i in 1:length(tmp)) {
+        tmp_bin_sd <- tmp_bin_sd + ((i - tmp_bin_mu))^2 * tmp[i]
+  }
+  tmp_bin_sd <- tmp_bin_sd / tmp_pop
+  
+  tmp_sd <- 0
+  for(i in 5:bin_upper) {
+        tmp_sd <- tmp_sd + ((i - 3 - tmp_mu))^2 * sum(bin[,i])
+  }
+  tmp_sd <- tmp_sd / sum(bin[,5:bin_upper])
+  
+  tmp_ratio <- dim(bin)[1] / dim(f)[1]
+  return(c(tmp_ratio, dim(bin)[1], tmp_mu,  tmp_bin_mu, sqrt(tmp_sd), sqrt(tmp_bin_sd)))
+}
+
+size_bins <- data.frame(row.names = c("count_ratio", "repo_count", "mean_chain_length", "bin_mean_chain_length", "chain_length_sd", "bin_chain_length_sd"))
+size_bins$S <- bin_stats(S_bin, 5, 11)
+size_bins$L <- bin_stats(L_bin, 12, 45)
+size_bins$xL <- bin_stats(XL_bin, 46, 403)
+size_bins
+```
+
 ```{r relative_occurrence (fn)}
 
 relative_occurrence <- f
@@ -79,4 +124,9 @@ a <- ggplot(ratio, aes(x = r))
 
 a + geom_histogram(color = "black", fill = "red")
 
+```
+
+```{r mc_bins}
+mc_binned <- data.frame(row.names = c("Short", "Long", "ExtLong"))
+mc_binned$num_chains_2019_2020 <- c(sum(f[,5:11]), sum(f[,12:44]), sum(f[,45:403]))
 ```
