@@ -58,6 +58,9 @@ public class ChainClassifier implements Runnable {
                 try
                 {
                     File classifications = new File("output/" + repos[i].getName() + "_identifiers.csv");
+                    if(!classifications.exists())
+                        continue;
+
                     Scanner scanner = new Scanner(classifications);
                     HashMap<String, String> method_classification = new HashMap<>();
                     while(scanner.hasNext())
@@ -68,12 +71,7 @@ public class ChainClassifier implements Runnable {
                     scanner.close();
 
                     for (File f : Objects.requireNonNull(repos[i].listFiles())) {
-                        try {
-                            System.out.println("Process file: " + f.getName());
-                            processFile(new FileInputStream(f.getAbsolutePath()), repos[i].getName(), method_classification);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                        processFile(f, repos[i].getName(), method_classification);
                     }
                 }
                 catch (Exception e)
@@ -85,8 +83,16 @@ public class ChainClassifier implements Runnable {
         }
     }
 
-    protected void processFile(FileInputStream target, String repoName, HashMap<String, String> method_classification)
+    protected void processFile(File file, String repoName, HashMap<String, String> method_classification)
     {
+        FileInputStream target = null;
+        try {
+            target = new FileInputStream(file.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+
         try
         {
             CompilationUnit cu = StaticJavaParser.parse(target);
@@ -104,7 +110,7 @@ public class ChainClassifier implements Runnable {
                 Optional<Range> r = chains.get(i).getRange();
                 if(visited_ranges.contains(r))
                 {
-                    System.out.println("!!! Remove duplicate range " + r);
+                    ///System.out.println("!!! Remove duplicate range " + r);
 
                     chains.remove(i);
                     continue;
@@ -115,7 +121,7 @@ public class ChainClassifier implements Runnable {
                 String cur_scope = chains.get(i).getScope().toString();
                 cur_scope = cur_scope.substring("Optional[".length(), cur_scope.length() - 1);
 
-                System.out.println("## " + chains.get(i).getNameAsString() + " " + cur_scope + " >> range: " + chains.get(i).getRange());
+                //System.out.println("## " + chains.get(i).getNameAsString() + " " + cur_scope + " >> range: " + chains.get(i).getRange());
 
                 if(prev_scope.contains("(") && prev_scope.contains(cur_scope))
                     chains.remove(i);
@@ -131,7 +137,7 @@ public class ChainClassifier implements Runnable {
 
                 if(prev_scope.contains(chains.get(i).getNameAsString()))
                 {
-                    System.out.println(">> " + chains.get(i).getNameAsString() + " in " + prev_scope);
+                    //System.out.println(">> " + chains.get(i).getNameAsString() + " in " + prev_scope);
 
                     if(method_classification.get(chains.get(i - 1).getNameAsString()) == "builder")
                         chains.remove(i);
@@ -160,13 +166,13 @@ public class ChainClassifier implements Runnable {
                 if(method_class == null)
                     method_class = "Others";
 
-                System.out.println(x.getNameAsString() + ", scope: " + x.getScope() + ", size bin: " + sizes[bin] + ", method class: " + method_class + ", range: " + x.getRange());
+                //System.out.println(x.getNameAsString() + ", scope: " + x.getScope() + ", size bin: " + sizes[bin] + ", method class: " + method_class + ", range: " + x.getRange());
 
                 bin_counts[bin][bin_mapping.get(method_class)]++;
             });
 
         }
-        catch(Exception e) { e.printStackTrace(); }
+        catch(Exception e) { System.out.println("Failed to parse " + file.getName()); e.printStackTrace(); }
     }
 
     public final int[][] getResult()
