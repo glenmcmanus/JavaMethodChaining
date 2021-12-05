@@ -59,7 +59,7 @@ public class MethodFinder {
 
             LongChainSearchRunner.handleFindLongestN(args);
         }
-        else
+        else //counting up all chains
         {
             List<List<String>> data = new ArrayList<>();
 

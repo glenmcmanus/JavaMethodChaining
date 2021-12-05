@@ -1,5 +1,6 @@
 package methodFinder;
 
+import com.github.javaparser.Range;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -8,6 +9,7 @@ import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
+import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.*;
@@ -32,6 +34,8 @@ public class ChainClassifier implements Runnable {
     // |S   |
     // |L   |
     // |XL  |
+
+    protected static final String[] sizes = new String[] {"S", "L", "XL"};
 
     protected int[][] bin_counts = new int[3][4];
 
@@ -65,6 +69,7 @@ public class ChainClassifier implements Runnable {
 
                     for (File f : Objects.requireNonNull(repos[i].listFiles())) {
                         try {
+                            System.out.println("Process file: " + f.getName());
                             processFile(new FileInputStream(f.getAbsolutePath()), repos[i].getName(), method_classification);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -88,14 +93,29 @@ public class ChainClassifier implements Runnable {
 
             var chains = cu.stream(Node.TreeTraversal.PREORDER)
                     .flatMap(x -> x.findAll(MethodCallExpr.class).stream())
-                    .distinct()
                     .collect(Collectors.toList());
+
+
+            ArrayList<Optional<Range>> visited_ranges = new ArrayList<>();
 
             String prev_scope = "";
             for(int i = 0; i < chains.size(); i++)
             {
+                Optional<Range> r = chains.get(i).getRange();
+                if(visited_ranges.contains(r))
+                {
+                    System.out.println("!!! Remove duplicate range " + r);
+
+                    chains.remove(i);
+                    continue;
+                }
+
+                visited_ranges.add(r);
+
                 String cur_scope = chains.get(i).getScope().toString();
                 cur_scope = cur_scope.substring("Optional[".length(), cur_scope.length() - 1);
+
+                System.out.println("## " + chains.get(i).getNameAsString() + " " + cur_scope + " >> range: " + chains.get(i).getRange());
 
                 if(prev_scope.contains("(") && prev_scope.contains(cur_scope))
                     chains.remove(i);
@@ -111,6 +131,8 @@ public class ChainClassifier implements Runnable {
 
                 if(prev_scope.contains(chains.get(i).getNameAsString()))
                 {
+                    System.out.println(">> " + chains.get(i).getNameAsString() + " in " + prev_scope);
+
                     if(method_classification.get(chains.get(i - 1).getNameAsString()) == "builder")
                         chains.remove(i);
                     else
@@ -122,9 +144,7 @@ public class ChainClassifier implements Runnable {
                     prev_scope = cur_scope;
             }
 
-
-            chains.forEach(x -> {
-                System.out.println(x.getNameAsString() + ", scope: " + x.getScope());
+            chains.stream().distinct().forEach(x -> {
 
                 int scope_size = MethodFinder.getScopeSize(x);
                 int bin = 0;
@@ -136,7 +156,13 @@ public class ChainClassifier implements Runnable {
                 else if(scope_size >= 42)
                     bin = 2;
 
-                bin_counts[bin][bin_mapping.get(method_classification.get(x.getNameAsString()))]++;
+                String method_class = method_classification.get(x.getNameAsString());
+                if(method_class == null)
+                    method_class = "Others";
+
+                System.out.println(x.getNameAsString() + ", scope: " + x.getScope() + ", size bin: " + sizes[bin] + ", method class: " + method_class + ", range: " + x.getRange());
+
+                bin_counts[bin][bin_mapping.get(method_class)]++;
             });
 
         }

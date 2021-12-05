@@ -1,5 +1,6 @@
 package methodFinder;
 
+import com.github.javaparser.Range;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
@@ -29,6 +30,7 @@ public class ChainIdentifier implements Runnable {
         this.identifier = new StringBuilder();
         this.UPPER_BOUND = UPPER_BOUND;
         this.LOWER_BOUND = LOWER_BOUND;
+        repo_methods = new HashMap<>();
     }
 
     @Override
@@ -71,12 +73,22 @@ public class ChainIdentifier implements Runnable {
 
             var chains = cu.stream(Node.TreeTraversal.PREORDER)
                     .flatMap(x -> x.findAll(MethodCallExpr.class).stream())
-                    .distinct()
                     .collect(Collectors.toList());
+
+            ArrayList<Optional<Range>> visited_ranges = new ArrayList<>();
 
             String prev_scope = "";
             for(int i = 0; i < chains.size(); i++)
             {
+                Optional<Range> r = chains.get(i).getRange();
+                if(visited_ranges.contains(r))
+                {
+                    chains.remove(i);
+                    continue;
+                }
+
+                visited_ranges.add(r);
+
                 String cur_scope = chains.get(i).getScope().toString();
                 cur_scope = cur_scope.substring("Optional[".length(), cur_scope.length() - 1);
 

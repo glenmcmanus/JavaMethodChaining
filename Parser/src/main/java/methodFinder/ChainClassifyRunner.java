@@ -105,7 +105,6 @@ public class ChainClassifyRunner {
         if(!output_dir.exists())
             output_dir.mkdir();
 
-        System.out.println("Write unique method names");
         final StringBuilder sb = new StringBuilder();
 
         int[][] total_results = new int[3][4];

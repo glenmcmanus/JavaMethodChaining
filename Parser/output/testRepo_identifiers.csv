@@ -1,7 +1,8 @@
 Method_Name,Method_Type
 baz,others
 foo,others
-split,others
+bar,others
+split,builder
 forEach,accessor
 get,accessor
 collect,others
@@ -10,3 +11,5 @@ toList,builder
 pop,accessor
 push,accessor
 valueOf,accessor
+filter,others
+of,others
