@@ -5,17 +5,16 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MethodFinder {
 
-    private static final int THREAD_COUNT = 4;
     private static int max_chain_length = 0;
+    private static final String ARG_PATH_MISSING_MSG = "A full path to a target root folder of repos, " +
+                                                        "or an input file with the first line targeting the root of a repo collection " +
+                                                        "and the names of repos to parse must be provided";
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -34,11 +33,31 @@ public class MethodFinder {
         {
             if(args.length == 1)
             {
-                System.out.println("A full path to a target repo must be provided for identification of unique methods");
+                System.out.println(ARG_PATH_MISSING_MSG);
                 return;
             }
 
-            handleIdentify(new File(args[1]));
+            ChainIdentifyRunner.handleIdentify(args);
+        }
+        else if(args[0].strip().equals("-classify"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println(ARG_PATH_MISSING_MSG);
+                return;
+            }
+
+            ChainClassifyRunner.handleClassify(args);
+        }
+        else if(args[0].strip().equals("-longest"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println(ARG_PATH_MISSING_MSG);
+                return;
+            }
+
+            LongChainSearchRunner.handleFindLongestN(args);
         }
         else
         {
@@ -74,74 +93,22 @@ public class MethodFinder {
         }
     }
 
-    protected static void handleIdentify(File arg_target)
-    {
-        if (!arg_target.exists()) {
-            System.out.println("Couldn't find target at path: " + arg_target);
-            System.out.println("Expected usage: args contain full path to files or folders of files to parse.");
-            return;
-        }
-
-        if (arg_target.isFile()) {
-            System.out.println("Processing file " + arg_target.getName());
-
-            getUniqueMethodNames(new File[] {arg_target});
-        } else if (arg_target.isDirectory()) {
-            File[] repos = arg_target.listFiles();
-            if (repos == null) {
-                System.out.println(arg_target.getName() + " has no content to parse.");
-                return;
-            }
-
-            System.out.println("Processing directory " + arg_target.getName() + " with " + repos.length + " sub-files/folders");
-
-            getUniqueMethodNames(repos);
-        }
-    }
-
-    protected  static void getUniqueMethodNames(File[] repos)
-    {
-        final int bin_size = repos.length / THREAD_COUNT;
-        Thread[] threads = new Thread[THREAD_COUNT];
-        ChainRootIdentifier[] identifiers = new ChainRootIdentifier[THREAD_COUNT];
-
-        for(int i = 0; i < THREAD_COUNT - 1; i++)
-        {
-            identifiers[i] = new ChainRootIdentifier(repos, bin_size * i, bin_size * (i+1) );
-            threads[i] = new Thread(identifiers[i]);
-            threads[i].start();
-        }
-
-        identifiers[THREAD_COUNT - 1] = new ChainRootIdentifier(repos, bin_size * (THREAD_COUNT - 1), repos.length);
-        threads[THREAD_COUNT - 1] = new Thread(identifiers[THREAD_COUNT - 1]);
-        threads[THREAD_COUNT - 1].start();
-
-        try {
-            for(int i = 0; i < threads.length; i++)
-                threads[i].join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        write_unique_method_name_CSV(identifiers);
-    }
-
     protected static void processRepos(File[] repos, List<List<String>> data)
     {
-        final int bin_size = repos.length / THREAD_COUNT;
-        Thread[] threads = new Thread[THREAD_COUNT];
-        RepoProcessor[] processors = new RepoProcessor[THREAD_COUNT];
+        final int bin_size = repos.length / Constants.THREAD_COUNT;
+        Thread[] threads = new Thread[Constants.THREAD_COUNT];
+        RepoProcessor[] processors = new RepoProcessor[Constants.THREAD_COUNT];
 
-        for(int i = 0; i < THREAD_COUNT - 1; i++)
+        for(int i = 0; i < Constants.THREAD_COUNT - 1; i++)
         {
             processors[i] = new RepoProcessor(repos, bin_size * i, bin_size * (i+1) );
             threads[i] = new Thread(processors[i]);
             threads[i].start();
         }
 
-        processors[THREAD_COUNT - 1] = new RepoProcessor(repos, bin_size * (THREAD_COUNT - 1), repos.length);
-        threads[THREAD_COUNT - 1] = new Thread(processors[THREAD_COUNT - 1]);
-        threads[THREAD_COUNT - 1].start();
+        processors[Constants.THREAD_COUNT - 1] = new RepoProcessor(repos, bin_size * (Constants.THREAD_COUNT - 1), repos.length);
+        threads[Constants.THREAD_COUNT - 1] = new Thread(processors[Constants.THREAD_COUNT - 1]);
+        threads[Constants.THREAD_COUNT - 1].start();
 
         try {
             for(int i = 0; i < threads.length; i++)
@@ -187,41 +154,6 @@ public class MethodFinder {
                     .orElse(1);
         }
         catch(Exception e) { e.printStackTrace(); return 0; }
-    }
-
-    protected  static void write_unique_method_name_CSV(ChainRootIdentifier[] identifiers)
-    {
-        File output_dir = new File("output/");
-        if(!output_dir.exists())
-            output_dir.mkdir();
-
-        System.out.println("Write unique method names");
-        final StringBuilder sb = new StringBuilder("output/");
-        for(var identifier : identifiers)
-        {
-            for(String repo : identifier.getRepoNames())
-            {
-                try
-                {
-                    sb.append(repo).append("_identifiers.csv");
-                    FileWriter csvWriter = new FileWriter(sb.toString());
-
-                    csvWriter.append("Method_Name,Method_Type\n");
-
-                    for(String row : identifier.getRepoMethodNames(repo))
-                    {
-                        csvWriter.append(row);
-                    }
-
-                    csvWriter.flush();
-                    csvWriter.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                sb.setLength("/output/".length());
-            }
-        }
     }
 
     protected static void write_MC_Count_CSV(List<List<String>> data)

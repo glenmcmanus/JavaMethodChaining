@@ -1,0 +1,11 @@
+D:\Documents\UVIC\SENG480B\Project\Java_Method_Chaining\Data\code_for_parsing
+stleary--JSON-java
+bisq-network--bisq
+prestodb--presto
+apache--hadoop
+facebook--buck
+M66B--FairEmail
+google--error-prone
+aws--aws-sdk-java
+google--closure-compiler
+keycloak--keycloak
