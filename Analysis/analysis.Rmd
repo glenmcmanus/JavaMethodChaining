@@ -16,13 +16,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r load data}
 
 f <- read.csv(file = '../Parser/method_chaining_results.csv')
-
+classified <- read.csv(file = "../parser/output/binned_size_chain_classification_counts.csv")
 ```
 
-```{r clean data}
+```{r f clean data}
 
 f <- f[!(f$LongestChain == -1),]
 
+```
+
+```{r classified clean data}
+
+classified$Others <- classified$Assertion
+classified$Assertion <- classified$Builder
+classified$Builder <- classified$Accessor
+classified$Accessor <- classified$Size
+classified$Size <- NULL
 ```
 
 ```{r find repos with longest chains}
@@ -31,7 +40,7 @@ S_bin
 L_bin <- f %>% filter(f$LongestChain > 8 & f$LongestChain < 42)
 L_bin
 XL_bin <- f %>% filter(f$LongestChain >= 42)
-XL_bin
+XL_bin[order(XL_bin$LongestChain, decreasing = TRUE),]
 f %>% filter(f$LongestChain >= 100)
 f %>% filter(f$LongestChain >= 200)
 f %>% filter(f$LongestChain >= 300)
@@ -89,6 +98,20 @@ bin_stat$sd_type <- c(rep("total_sd", 3), rep("bin_sd", 3))
 bin_stat$sd_val <- c(size_bins$chain_length_sd, size_bins$bin_chain_length_sd)
 
 ggplot(bin_stat, aes(fill=sd_type, y=sd_val, x=size_id)) + geom_bar(position="dodge", stat="identity")
+
+```
+
+```{r classified_size_bins plots}
+
+size_id <-rep(size_bins$size_id,4)
+method_type <- c(rep("Accessor", 3), rep("Builder",3), rep("Assertion", 3), rep("Others", 3))
+method_size_count <- c(classified$Accessor, classified$Builder, classified$Assertion, classified$Others)
+
+classified_bins <- data.frame(size_id,method_type,method_size_count)
+classified_bins
+classified
+
+ggplot(classified_bins, aes(fill=method_type, y=method_size_count, x=size_id)) + geom_bar(position="dodge", stat="identity") + scale_y_log10()
 
 ```
 
