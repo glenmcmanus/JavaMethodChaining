@@ -5,19 +5,21 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MethodFinder {
 
-    private static final int THREAD_COUNT = 4;
     private static int max_chain_length = 0;
+    private static final String ARG_PATH_MISSING_MSG = "A full path to a target root folder of repos, " +
+                                                        "or an input file with the first line targeting the root of a repo collection " +
+                                                        "and the names of repos to parse must be provided";
 
     public static void main(String[] args) throws FileNotFoundException {
+
+        for(var s : args)
+            System.out.println("'"+s+"'");
 
         if(args.length == 0)
         {
@@ -27,7 +29,37 @@ public class MethodFinder {
                 .flatMap(x -> x.findAll(MethodCallExpr.class).stream())
                 .forEach(x -> System.out.println(x.toString() + "\nMethod Chains = " + getScopeSize(x)));
         }
-        else
+        else if(args[0].strip().equals("-identify"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println(ARG_PATH_MISSING_MSG);
+                return;
+            }
+
+            ChainIdentifyRunner.handleIdentify(args);
+        }
+        else if(args[0].strip().equals("-classify"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println(ARG_PATH_MISSING_MSG);
+                return;
+            }
+
+            ChainClassifyRunner.handleClassify(args);
+        }
+        else if(args[0].strip().equals("-longest"))
+        {
+            if(args.length == 1)
+            {
+                System.out.println(ARG_PATH_MISSING_MSG);
+                return;
+            }
+
+            LongChainSearchRunner.handleFindLongestN(args);
+        }
+        else //counting up all chains
         {
             List<List<String>> data = new ArrayList<>();
 
@@ -57,26 +89,26 @@ public class MethodFinder {
                 }
             }
 
-            writeCSV(data);
+            write_MC_Count_CSV(data);
         }
     }
 
     protected static void processRepos(File[] repos, List<List<String>> data)
     {
-        final int bin_size = repos.length / THREAD_COUNT;
-        Thread[] threads = new Thread[THREAD_COUNT];
-        RepoProcessor[] processors = new RepoProcessor[THREAD_COUNT];
+        final int bin_size = repos.length / Constants.THREAD_COUNT;
+        Thread[] threads = new Thread[Constants.THREAD_COUNT];
+        RepoProcessor[] processors = new RepoProcessor[Constants.THREAD_COUNT];
 
-        for(int i = 0; i < THREAD_COUNT - 1; i++)
+        for(int i = 0; i < Constants.THREAD_COUNT - 1; i++)
         {
             processors[i] = new RepoProcessor(repos, bin_size * i, bin_size * (i+1) );
             threads[i] = new Thread(processors[i]);
             threads[i].start();
         }
 
-        processors[THREAD_COUNT - 1] = new RepoProcessor(repos, bin_size * (THREAD_COUNT - 1), repos.length);
-        threads[THREAD_COUNT - 1] = new Thread(processors[THREAD_COUNT - 1]);
-        threads[THREAD_COUNT - 1].start();
+        processors[Constants.THREAD_COUNT - 1] = new RepoProcessor(repos, bin_size * (Constants.THREAD_COUNT - 1), repos.length);
+        threads[Constants.THREAD_COUNT - 1] = new Thread(processors[Constants.THREAD_COUNT - 1]);
+        threads[Constants.THREAD_COUNT - 1].start();
 
         try {
             for(int i = 0; i < threads.length; i++)
@@ -124,11 +156,15 @@ public class MethodFinder {
         catch(Exception e) { e.printStackTrace(); return 0; }
     }
 
-    protected static void writeCSV(List<List<String>> data)
+    protected static void write_MC_Count_CSV(List<List<String>> data)
     {
+        File output_dir = new File("output/");
+        if(!output_dir.exists())
+            output_dir.mkdir();
+
         try
         {
-            FileWriter csvWriter = new FileWriter("method_chaining_results.csv");
+            FileWriter csvWriter = new FileWriter("output/method_chaining_results.csv");
 
             csvWriter.append("Repo,LongestChain");
 
