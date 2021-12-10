@@ -26,12 +26,14 @@ public class LongChainFinder implements Runnable {
         public final int length;
         public final String repo;
         public final String filename;
+        public final String scope;
 
-        public LongChain(int length, String repo, String filename)
+        public LongChain(int length, String repo, String filename, String scope)
         {
             this.length = length;
             this.repo = repo;
             this.filename = filename;
+            this.scope = scope;
         }
     }
 
@@ -92,23 +94,48 @@ public class LongChainFinder implements Runnable {
 
             for(int i = 0; i < chains.size(); i++)
             {
-                int scope_size = MethodFinder.getScopeSize(chains.get(i));
+                MethodCallExpr cur_chain = chains.get(i);
+                String cur_scope = cur_chain.getScope().toString();
+                cur_scope = cur_scope.substring("Optional[".length(), cur_scope.length() - 1);
 
                 //System.out.println("Chain " + i + " size: " + scope_size);
 
-                for(int k = 0; k < longChains.length; k++)
+                boolean subchain_found = false;
+                for(LongChain lc : longChains)
                 {
-                    if(longChains[k] == null)
+                    if(lc == null)
+                        continue;
+
+                    if(lc.scope.contains(cur_scope))
                     {
-                        longChains[k] = new LongChain(scope_size, repoName, filename);
+                        subchain_found = true;
                         break;
                     }
-                    else if(longChains[k].length < scope_size)
+                }
+
+                if(subchain_found)
+                    continue;
+
+                int scope_size = MethodFinder.getScopeSize(cur_chain);
+
+                for(int k = 0; k < longChains.length; k++) {
+                    if (longChains[k] == null || cur_scope.contains(longChains[k].scope)) {
+                        longChains[k] = new LongChain(scope_size, repoName, filename, cur_scope);
+                        subchain_found = true;
+                        break;
+                    }
+                }
+
+                if(subchain_found)
+                    continue;
+
+                for(int k = 0; k < longChains.length; k++) {
+                    if(longChains[k].length < scope_size)
                     {
                         for(int n = k + 1; n < longChains.length; n++)
                             longChains[n] = longChains[n - 1];
 
-                        longChains[k] = new LongChain(scope_size, repoName, filename);
+                        longChains[k] = new LongChain(scope_size, repoName, filename, cur_scope);
                         break;
                     }
                 }
@@ -117,6 +144,7 @@ public class LongChainFinder implements Runnable {
             longest_chains.put(repoName, longChains);
         }
         catch(Exception e) {
+            e.printStackTrace();
             failed_to_parse.add("Failed to parse " + repoName + " :: " + filename + "\n");
         }
     }

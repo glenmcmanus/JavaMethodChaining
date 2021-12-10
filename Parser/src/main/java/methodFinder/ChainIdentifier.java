@@ -160,7 +160,7 @@ public class ChainIdentifier implements Runnable {
             sb.append(method);
 
             String lower = method.toLowerCase();
-            if(lower.contains("get") || lower.contains("for") || lower.contains("set") || lower.equals("pop") || lower.equals("push") || lower.equals("peek") || lower.equals("valueof"))
+            if(lower.contains("get") || lower.contains("for") || lower.contains("set") || lower.contains("with") || lower.equals("pop") || lower.equals("push") || lower.equals("peek") || lower.equals("valueof"))
                 sb.append(",").append("accessor");
             else if(lower.contains("build") || lower.contains("make") || lower.contains("create") || (lower.length() >= 2 && lower.substring(0,2).equals("to")) || lower.equals("split"))
                 sb.append(",").append("builder");

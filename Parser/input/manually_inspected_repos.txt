@@ -1,0 +1,9 @@
+D:\Documents\UVIC\SENG480B\Project\Java_Method_Chaining\Data\code_for_parsing
+crazyandcoder--citypicker
+nanchen2251--CompressHelper
+brianway--java-learning
+android--user-interface-samples
+leolin310148--ShortcutBadger
+yuliskov--SmartTubeNext
+mzule--ActivityRouter
+florent37--DiagonalLayout

@@ -166,7 +166,7 @@ public class MethodFinder {
         {
             FileWriter csvWriter = new FileWriter("output/method_chaining_results.csv");
 
-            csvWriter.append("Repo,LongestChain");
+            csvWriter.append("Repo,File_Type,LongestChain");
 
             for(int i = 0; i <= max_chain_length; i++)
                 csvWriter.append(",").append("Length ").append(String.valueOf(i));
@@ -175,7 +175,10 @@ public class MethodFinder {
 
             for (List<String> repos : data) {
                 for(String observation : repos )
-                    csvWriter.append(padOutputWithZeros(observation));
+                {
+                    for(String s : observation.split("\n"))
+                        csvWriter.append(padOutputWithZeros(s));
+                }
             }
 
             csvWriter.flush();

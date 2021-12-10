@@ -15,15 +15,23 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r load data}
 
-f <- read.csv(file = '../Parser/method_chaining_results.csv')
+#f <- read.csv(file = '../Parser/output/backup/method_chaining_results.csv')
+f_with_test <- read.csv(file = "../Parser/output/method_chaining_results_with_test_and_nontest.csv")
 classified <- read.csv(file = "../parser/output/binned_size_chain_classification_counts.csv")
 manual_insp <- read.csv(file = "Manual_Inspection.csv")
+lines_of_code <- read.csv(file = "lines_of_code.csv")
 ```
 
 ```{r f clean data}
 
 f <- f[!(f$LongestChain == -1),]
+```
 
+```{r f_with_test clean data}
+f_with_test <- f_with_test[!is.nan(f_with_test$LongestChain),]
+f_with_test <- f_with_test[,1:348]
+f_with_test[is.na(f_with_test)] <- 0
+f_with_test <- f_with_test[-1475,]  
 ```
 
 ```{r classified clean data}
@@ -33,6 +41,79 @@ classified$Assertion <- classified$Builder
 classified$Builder <- classified$Accessor
 classified$Accessor <- classified$Size
 classified$Size <- NULL
+```
+
+```{r relative_occurrence (fn)}
+
+relative_occurrence <- f
+
+relative_occurrence[ , 5:403] <- f[ , 5:403] / f[ , 4]
+
+relative_occurrence <- select(relative_occurrence, -LongestChain, -Length.0, -Length.1)
+
+```
+
+```{r clean relative_occurrence}
+
+relative_occurrence <- relative_occurrence[!(is.nan(relative_occurrence$Length.2) | relative_occurrence$Length.2 == Inf), ]
+
+```
+
+```{r fn}
+
+fn <- data.frame(row.names = c(1:400))
+fn$n <- c(1:400)
+#fn$count <- c(2:400)
+fn$relative_occurrence <- c(1:400)
+
+for(i in 1:nrow(fn)) {
+  #fn[i,1] <- sum(na.omit(f[, i + 4]))
+  fn[i,2] <- mean(na.omit(relative_occurrence[, i]))
+}
+
+fn <- fn[-1,]
+
+```
+
+```{r plot fn}
+p <- ggplot(fn, aes(n, relative_occurrence))
+p + geom_point() + scale_y_log10() + scale_x_log10()
+```
+
+```{r ratio}
+
+ratio <- f
+ratio <- select(ratio, Repo)
+
+ratio$r <- f[ , 3]
+for(i in 0:nrow(ratio)) {
+  ratio[i, 2] <- sum(f[i, 5:403]) / sum(f[i, 4:403])  
+}
+```
+
+```{r ratio histogram}
+
+a <- ggplot(ratio, aes(x = r))
+
+a + geom_histogram(color = "black", fill = "red")
+
+```
+
+```{r mc_bins}
+mc_binned <- data.frame(row.names = c("Short", "Long", "ExtLong"))
+mc_binned$num_chains_2019_2020 <- c(sum(f[,5:11]), sum(f[,12:44]), sum(f[,45:403]))
+```
+
+```{r relative_occurrence_tests (fn)}
+
+relative_occurrence_tests <- f_with_test
+
+relative_occurrence_tests[ , 6:348] <- f_with_test[ , 6:348] / f_with_test[ , 5]
+
+relative_occurrence_tests <- select(relative_occurrence_tests, -LongestChain, -Length.0, -Length.1)
+
+relative_occurrence_tests[is.na(relative_occurrence_tests)] = 0
+
 ```
 
 ```{r normalize_data def}
@@ -173,63 +254,67 @@ manual_classified_bins
 ggplot(manual_classified_bins, aes(fill=method_type, y=within_size_bin_chain_ratio, x=size_id)) + geom_bar(position="dodge", stat="identity")
 ```
 
-```{r relative_occurrence (fn)}
+```{r fn_with_tests}
 
-relative_occurrence <- f
-
-relative_occurrence[ , 5:403] <- f[ , 5:403] / f[ , 4]
-
-relative_occurrence <- select(relative_occurrence, -LongestChain, -Length.0, -Length.1)
-
-```
-
-```{r clean relative_occurrence}
-
-relative_occurrence <- relative_occurrence[!(is.nan(relative_occurrence$Length.2) | relative_occurrence$Length.2 == Inf), ]
-
-```
-
-```{r fn}
-
-fn <- data.frame(row.names = c(1:400))
-fn$n <- c(1:400)
+fn_with_tests <- data.frame(row.names = c(1:684))
 #fn$count <- c(2:400)
-fn$relative_occurrence <- c(1:400)
+fn_with_tests$relative_occurrence <- c(1:684)
+fn_with_tests$file_type <- seq(1,684)
+fn_with_tests$chain_length <- rep(1:342, each=2)
 
-for(i in 1:nrow(fn)) {
+fn_with_tests$file_type <- rep(c("Non-Test", "Test"), 342)
+
+for(i in 1:nrow(fn_with_tests)) {
   #fn[i,1] <- sum(na.omit(f[, i + 4]))
-  fn[i,2] <- mean(na.omit(relative_occurrence[, i]))
+  if(fn_with_tests$file_type[i] == "Non-Test")
+  {
+    fn_with_tests[i,1] <- mean(na.omit(relative_occurrence_tests[seq(1, nrow(relative_occurrence_tests), by=2), fn_with_tests$chain_length[i] + 3]))
+  }
+  else if(fn_with_tests$file_type[i] == "Test")
+  {
+    fn_with_tests[i,1] <- mean(na.omit(relative_occurrence_tests[seq(2, nrow(relative_occurrence_tests), by=2), fn_with_tests$chain_length[i] + 3]))
+  }
 }
 
-fn <- fn[-1,]
-
+#fn_with_tests <- fn_with_tests[-1,]
 ```
 
-```{r plot fn}
-p <- ggplot(fn, aes(n, relative_occurrence))
+```{r plot fn_with_tests}
+p <- ggplot(fn_with_tests, aes(x = chain_length, y = relative_occurrence, color = file_type))
 p + geom_point() + scale_y_log10() + scale_x_log10()
 ```
 
-```{r ratio}
+```{r ratio_with_tests}
 
-ratio <- f
-ratio <- select(ratio, Repo)
+ratio_with_tests <- f_with_test
+ratio_with_tests <- select(ratio_with_tests, Repo, File_Type)
+ratio_with_tests$r <- f_with_test[ , 3]
 
-ratio$r <- f[ , 3]
-for(i in 0:nrow(ratio)) {
-  ratio[i, 2] <- sum(f[i, 5:403]) / sum(f[i, 3:403])  
+ratio_with_tests$r[is.na(ratio_with_tests$r)] <- 0.0
+
+for(i in 1:nrow(ratio_with_tests)) {
+  denominator <- sum(f_with_test[i, 5:ncol(f_with_test)])
+  
+  if(denominator == 0)
+  {
+    ratio_with_tests[i,3] <- 0.0
+  }
+  else
+  {
+    ratio_with_tests[i,3] <- sum(f_with_test[i, 6:ncol(f_with_test)]) / denominator  
+  }
+            
 }
-```
-
-```{r ratio histogram}
-
-a <- ggplot(ratio, aes(x = r))
-
-a + geom_histogram(color = "black", fill = "red")
 
 ```
 
-```{r mc_bins}
-mc_binned <- data.frame(row.names = c("Short", "Long", "ExtLong"))
-mc_binned$num_chains_2019_2020 <- c(sum(f[,5:11]), sum(f[,12:44]), sum(f[,45:403]))
+```{r ratio_with_tests histogram}
+
+
+ratio_with_tests$r <- as.numeric(ratio_with_tests$r)
+
+a <- ggplot(ratio_with_tests, aes(x = r,  color = File_Type))
+
+a + geom_histogram(binwidth= 0.01, fill = "white", alpha=0.4, position = "identity") + scale_y_log10()
+
 ```
