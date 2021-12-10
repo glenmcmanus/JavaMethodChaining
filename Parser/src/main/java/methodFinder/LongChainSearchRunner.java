@@ -116,11 +116,15 @@ public class LongChainSearchRunner {
         try
         {
             FileWriter csvWriter = new FileWriter("output/paths_to_n_longest_chains.csv");
+            FileWriter error_log = new FileWriter("output/error_log_paths_to_n_longest.txt");
 
             csvWriter.append("Chain_Length,Repo,Filename\n");
 
             for(var finder : finders)
             {
+                for(String err : finder.getFails())
+                    error_log.append(err);
+
                 if(finder.longest_chains == null)
                     continue;
 
@@ -130,7 +134,11 @@ public class LongChainSearchRunner {
 
             csvWriter.flush();
             csvWriter.close();
-        } catch (Exception e) {
+
+            error_log.flush();
+            error_log.close();
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
     }

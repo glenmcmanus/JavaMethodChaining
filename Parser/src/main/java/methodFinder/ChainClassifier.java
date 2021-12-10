@@ -23,6 +23,8 @@ public class ChainClassifier implements Runnable {
     protected final int UPPER_BOUND;
     protected final int LOWER_BOUND;
 
+    protected ArrayList<String> failed_to_parse;
+
     public static final HashMap<String, Integer> bin_mapping = new HashMap<>() {{
         put("accessor", 0);
         put("builder", 1);
@@ -45,6 +47,8 @@ public class ChainClassifier implements Runnable {
         this.identifier = new StringBuilder();
         this.UPPER_BOUND = UPPER_BOUND;
         this.LOWER_BOUND = LOWER_BOUND;
+
+        failed_to_parse = new ArrayList<>();
     }
 
     @Override
@@ -172,7 +176,9 @@ public class ChainClassifier implements Runnable {
             });
 
         }
-        catch(Exception e) { System.out.println("Failed to parse " + file.getName()); e.printStackTrace(); }
+        catch(Exception e) {
+            failed_to_parse.add("Failed to parse " + repoName + " :: " + file.getName() + "\n");
+        }
     }
 
     public final int[][] getResult()
@@ -180,4 +186,8 @@ public class ChainClassifier implements Runnable {
         return bin_counts;
     }
 
+    public final ArrayList<String> getFails()
+    {
+        return failed_to_parse;
+    }
 }

@@ -107,17 +107,22 @@ public class ChainClassifyRunner {
 
         final StringBuilder sb = new StringBuilder();
 
-        int[][] total_results = new int[3][4];
-        for(var identifier : classifiers) {
-            int[][] results = identifier.getResult();
-            for (int x = 0; x < results.length; x++) {
-                for (int y = 0; y < results[x].length; y++) {
-                    total_results[x][y] += results[x][y];
+        try {
+            FileWriter error_log = new FileWriter("output/error_log_classifiers.txt");
+
+            int[][] total_results = new int[3][4];
+            for(var classifier : classifiers) {
+
+                for(String err : classifier.getFails())
+                    error_log.append(err);
+
+                int[][] results = classifier.getResult();
+                for (int x = 0; x < results.length; x++) {
+                    for (int y = 0; y < results[x].length; y++) {
+                        total_results[x][y] += results[x][y];
+                    }
                 }
             }
-        }
-
-        try {
 
             // |Size|Accessor|Builder|Assertion|Others
             // |S   |
@@ -125,6 +130,7 @@ public class ChainClassifyRunner {
             // |XL  |
 
             FileWriter csvWriter = new FileWriter("output/binned_size_chain_classification_counts.csv");
+
             csvWriter.append("Size,Accessor,Builder,Assertion,Others\n");
             final String[] sizes = new String[] {"S,","L,","XL,"};
 
@@ -141,6 +147,9 @@ public class ChainClassifyRunner {
 
             csvWriter.flush();
             csvWriter.close();
+
+            error_log.flush();
+            error_log.close();
         }
         catch (Exception e) {
             e.printStackTrace();
