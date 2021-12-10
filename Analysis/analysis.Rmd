@@ -17,6 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 f <- read.csv(file = '../Parser/method_chaining_results.csv')
 classified <- read.csv(file = "../parser/output/binned_size_chain_classification_counts.csv")
+manual_insp <- read.csv(file = "Manual_Inspection.csv")
 ```
 
 ```{r f clean data}
@@ -33,6 +34,51 @@ classified$Builder <- classified$Accessor
 classified$Accessor <- classified$Size
 classified$Size <- NULL
 ```
+
+```{r normalize_data def}
+normalize_data <- function(data)
+{
+
+  for(i in 1:dim(data)[1])
+  {
+    total <- sum(data[i,])
+    if(total == 0)
+      next
+
+    for(k in 1:range(length(data[i,])))
+    {
+      data[i,k] <- data[i,k] / total
+    }
+  }
+  
+  return(data);  
+}
+```
+
+```{r scale classified data}
+classified_scaled <- normalize_data(classified)
+classified_scaled
+```
+
+```{r bin manual_inspection}
+
+manual_insp_binned <- data.frame(row.names=c("S","L","XL"))
+manual_insp_binned$Accessors <- c(sum(manual_insp$non.test..Short..Accessor, manual_insp$test..Short..Accessor), sum(manual_insp$non.test..Long..Accessor, manual_insp$non.test..Long..Accessor), sum(manual_insp$test..ExtLong..Accessor, manual_insp$non.test..ExtLong..Accessor))
+
+manual_insp_binned$Builders <- c(sum(manual_insp$non.test..Short..Builder, manual_insp$test..Short..Builder), sum(manual_insp$non.test..Long..Builder, manual_insp$non.test..Long..Builder), sum(manual_insp$test..ExtLong..Builder, manual_insp$non.test..ExtLong..Builder))
+
+manual_insp_binned$Assertion <- c(sum(manual_insp$non.test..Short..Assertion, manual_insp$test..Short..Assertion), sum(manual_insp$non.test..Long..Assertion, manual_insp$non.test..Long..Assertion), sum(manual_insp$test..ExtLong..Assertion, manual_insp$non.test..ExtLong..Assertion))
+
+manual_insp_binned$Others <- c(sum(manual_insp$non.test..Short..Others, manual_insp$test..Short..Others), sum(manual_insp$non.test..Long..Others, manual_insp$non.test..Long..Others), sum(manual_insp$test..ExtLong..Others, manual_insp$non.test..ExtLong..Others))
+
+manual_insp_binned
+```
+
+```{r scale_binned_manual_inspection}
+manual_insp_binned <- normalize_data(manual_insp_binned)
+manual_insp_binned
+```
+
 
 ```{r find repos with longest chains}
 S_bin <- f %>% filter(f$LongestChain > 1 & f$LongestChain <= 8)
@@ -105,14 +151,26 @@ ggplot(bin_stat, aes(fill=sd_type, y=sd_val, x=size_id)) + geom_bar(position="do
 
 size_id <-rep(size_bins$size_id,4)
 method_type <- c(rep("Accessor", 3), rep("Builder",3), rep("Assertion", 3), rep("Others", 3))
-method_size_count <- c(classified$Accessor, classified$Builder, classified$Assertion, classified$Others)
 
-classified_bins <- data.frame(size_id,method_type,method_size_count)
+within_size_bin_chain_ratio <- c(classified_scaled$Accessor, classified_scaled$Builder, classified_scaled$Assertion, classified_scaled$Others)
+
+classified_bins <- data.frame(size_id,method_type,within_size_bin_chain_ratio)
 classified_bins
-classified
 
-ggplot(classified_bins, aes(fill=method_type, y=method_size_count, x=size_id)) + geom_bar(position="dodge", stat="identity") + scale_y_log10()
+ggplot(classified_bins, aes(fill=method_type, y=within_size_bin_chain_ratio, x=size_id)) + geom_bar(position="dodge", stat="identity")
 
+```
+
+```{r manual_inspected_bin plots}
+size_id <-rep(size_bins$size_id,4)
+method_type <- c(rep("Accessor", 3), rep("Builder",3), rep("Assertion", 3), rep("Others", 3))
+
+within_size_bin_chain_ratio <- c(manual_insp_binned$Accessor, manual_insp_binned$Builder, manual_insp_binned$Assertion, manual_insp_binned$Others)
+
+manual_classified_bins <- data.frame(size_id,method_type,within_size_bin_chain_ratio)
+manual_classified_bins
+
+ggplot(manual_classified_bins, aes(fill=method_type, y=within_size_bin_chain_ratio, x=size_id)) + geom_bar(position="dodge", stat="identity")
 ```
 
 ```{r relative_occurrence (fn)}

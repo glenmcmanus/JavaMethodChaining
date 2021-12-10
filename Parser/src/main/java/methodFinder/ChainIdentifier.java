@@ -23,6 +23,8 @@ public class ChainIdentifier implements Runnable {
     protected final int UPPER_BOUND;
     protected final int LOWER_BOUND;
 
+    protected ArrayList<String> failed_to_parse;
+
     protected HashMap<String, ArrayList<String>> repo_methods;
 
     public ChainIdentifier(File[] repos, int LOWER_BOUND, int UPPER_BOUND)
@@ -32,6 +34,8 @@ public class ChainIdentifier implements Runnable {
         this.UPPER_BOUND = UPPER_BOUND;
         this.LOWER_BOUND = LOWER_BOUND;
         repo_methods = new HashMap<>();
+
+        failed_to_parse = new ArrayList<>();
     }
 
     @Override
@@ -111,7 +115,9 @@ public class ChainIdentifier implements Runnable {
             });
 
         }
-        catch(Exception e) { System.out.println("Failed to parse " + repoName + " -- " + file.getName()); }
+        catch(Exception e) {
+            failed_to_parse.add("Failed to parse " + repoName + " :: " + file.getName() + "\n");
+        }
     }
 
     public Set<String> getRepoNames()
@@ -173,4 +179,8 @@ public class ChainIdentifier implements Runnable {
         return result;
     }
 
+    public final ArrayList<String> getFails()
+    {
+        return failed_to_parse;
+    }
 }

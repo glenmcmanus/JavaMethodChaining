@@ -18,6 +18,8 @@ public class LongChainFinder implements Runnable {
     protected final int UPPER_BOUND;
     protected final int LOWER_BOUND;
 
+    protected ArrayList<String> failed_to_parse;
+
     protected HashMap<String, LongChain[]> longest_chains;
 
     protected class LongChain {
@@ -39,6 +41,8 @@ public class LongChainFinder implements Runnable {
         this.identifier = new StringBuilder();
         this.UPPER_BOUND = UPPER_BOUND;
         this.LOWER_BOUND = LOWER_BOUND;
+
+        failed_to_parse = new ArrayList<>();
 
         longest_chains = new HashMap<>();
         for(var f : repos)
@@ -112,7 +116,9 @@ public class LongChainFinder implements Runnable {
 
             longest_chains.put(repoName, longChains);
         }
-        catch(Exception e) { System.out.println(repoName + " :: " + filename + " contains lines that can't be parsed"); } //e.printStackTrace(); }
+        catch(Exception e) {
+            failed_to_parse.add("Failed to parse " + repoName + " :: " + filename + "\n");
+        }
     }
 
     public final ArrayList<String> getResult()
@@ -144,6 +150,11 @@ public class LongChainFinder implements Runnable {
         }
 
         return result;
+    }
+
+    public final ArrayList<String> getFails()
+    {
+        return failed_to_parse;
     }
 
 }

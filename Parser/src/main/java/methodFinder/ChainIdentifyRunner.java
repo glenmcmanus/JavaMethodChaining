@@ -1,9 +1,6 @@
 package methodFinder;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -101,38 +98,48 @@ public class ChainIdentifyRunner {
         write_unique_method_name_CSV(identifiers);
     }
 
-    protected  static void write_unique_method_name_CSV(ChainIdentifier[] identifiers)
-    {
+    protected  static void write_unique_method_name_CSV(ChainIdentifier[] identifiers) {
         File output_dir = new File("output/");
-        if(!output_dir.exists())
+        if (!output_dir.exists())
             output_dir.mkdir();
 
         System.out.println("Write unique method names");
-        final StringBuilder sb = new StringBuilder("output/");
-        for(var identifier : identifiers)
-        {
-            for(String repo : identifier.getRepoNames())
-            {
-                try
-                {
-                    sb.append(repo).append("_identifiers.csv");
-                    FileWriter csvWriter = new FileWriter(sb.toString());
 
-                    csvWriter.append("Method_Name,Method_Type\n");
+        try {
+            FileWriter error_log = new FileWriter("output/error_log_identifiers.txt");
 
-                    for(String row : identifier.getRepoMethodNames(repo))
-                    {
-                        csvWriter.append(row);
+            final StringBuilder sb = new StringBuilder("output/");
+            for (var identifier : identifiers) {
+
+                for(String err : identifier.getFails())
+                    error_log.append(err);
+
+                for (String repo : identifier.getRepoNames()) {
+                    try {
+                        sb.append(repo).append("_identifiers.csv");
+                        FileWriter csvWriter = new FileWriter(sb.toString());
+
+                        csvWriter.append("Method_Name,Method_Type\n");
+
+                        for (String row : identifier.getRepoMethodNames(repo)) {
+                            csvWriter.append(row);
+                        }
+
+                        csvWriter.flush();
+                        csvWriter.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
 
-                    csvWriter.flush();
-                    csvWriter.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                    sb.setLength("/output/".length());
                 }
-
-                sb.setLength("/output/".length());
             }
+
+            error_log.flush();
+            error_log.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

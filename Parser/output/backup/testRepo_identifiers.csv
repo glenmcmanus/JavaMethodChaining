@@ -1,0 +1,15 @@
+Method_Name,Method_Type
+baz,others
+foo,others
+bar,others
+split,builder
+forEach,accessor
+get,accessor
+collect,others
+stream,others
+toList,builder
+pop,accessor
+push,accessor
+valueOf,accessor
+filter,others
+of,others
