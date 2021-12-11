@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r load data}
 
-#f <- read.csv(file = '../Parser/output/backup/method_chaining_results.csv')
+f <- read.csv(file = '../Parser/output/backup/method_chaining_results.csv')
 f_with_test <- read.csv(file = "../Parser/output/method_chaining_results_with_test_and_nontest.csv")
 classified <- read.csv(file = "../parser/output/binned_size_chain_classification_counts.csv")
 manual_insp <- read.csv(file = "Manual_Inspection.csv")
@@ -318,3 +318,12 @@ a <- ggplot(ratio_with_tests, aes(x = r,  color = File_Type))
 a + geom_histogram(binwidth= 0.01, fill = "white", alpha=0.4, position = "identity") + scale_y_log10()
 
 ```
+
+```{r ratio_with_test means}
+{
+  test_r <- ratio_with_tests$r[ratio_with_tests$File_Type == "T"]
+  mean(non_test_r)
+  
+  non_test_r <- ratio_with_tests$r[ratio_with_tests$File_Type == "NT"]
+  mean(non_test_r)
+}
