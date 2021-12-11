@@ -321,9 +321,9 @@ a + geom_histogram(binwidth= 0.01, fill = "white", alpha=0.4, position = "identi
 
 ```{r ratio_with_test means}
 {
-  test_r <- ratio_with_tests$r[ratio_with_tests$File_Type == "T"]
+  test_r <- as.numeric(ratio_with_tests$r[ratio_with_tests$File_Type == "T"])
   mean(non_test_r)
   
-  non_test_r <- ratio_with_tests$r[ratio_with_tests$File_Type == "NT"]
+  non_test_r <- as.numeric(ratio_with_tests$r[ratio_with_tests$File_Type == "NT"])
   mean(non_test_r)
 }
